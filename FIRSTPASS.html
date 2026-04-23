@@ -1,0 +1,1201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FirstPass — Garment RFT Intelligence</title>
+<style>
+/* ── Base reset & typography ── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; font-size: 16px; }
+
+:root {
+  --ink:    #09090C;
+  --paper:  #111116;
+  --lift:   #17171F;
+  --raise:  #1E1E28;
+  --edge:   #2A2A38;
+  --line:   #363648;
+  --muted:  #64647C;
+  --soft:   #9494AC;
+  --body:   #CECEE0;
+  --white:  #EEEEF6;
+  --gold:   #D4A830;
+  --gold2:  #E8C050;
+  --glow:   rgba(212,168,48,0.09);
+  --green:  #52B07A;
+  --g-bg:   rgba(82,176,122,0.10);
+  --amber:  #D48840;
+  --a-bg:   rgba(212,136,64,0.10);
+  --red:    #C84848;
+  --r-bg:   rgba(200,72,72,0.10);
+  --blue:   #5890C8;
+  --b-bg:   rgba(88,144,200,0.10);
+  --serif:  'Times New Roman', Times, serif;
+  --mono:   'Courier New', Courier, monospace;
+}
+
+body {
+  font-family: var(--serif);
+  background: var(--ink);
+  color: var(--body);
+  min-height: 100vh;
+  overflow-x: hidden;
+  line-height: 1.6;
+}
+
+/* Subtle atmospheric background */
+body::before {
+  content: '';
+  position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  background:
+    radial-gradient(ellipse 800px 600px at -5% -5%, rgba(212,168,48,0.035) 0%, transparent 55%),
+    radial-gradient(ellipse 600px 800px at 105% 105%, rgba(82,176,122,0.025) 0%, transparent 55%);
+}
+
+/* ── HEADER / NAV ── */
+header {
+  position: sticky; top: 0; z-index: 200;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 48px; height: 64px;
+  background: rgba(9,9,12,0.94);
+  border-bottom: 1px solid var(--edge);
+  backdrop-filter: blur(24px);
+}
+
+.brand {
+  display: flex; align-items: baseline; gap: 10px;
+}
+.brand-name {
+  font-family: var(--serif);
+  font-size: 20px; font-weight: 700; letter-spacing: 0.3px;
+  color: var(--white);
+}
+.brand-name span { color: var(--gold); }
+.brand-divider {
+  width: 1px; height: 16px; background: var(--edge); align-self: center;
+}
+.brand-sub {
+  font-family: var(--mono); font-size: 10px; letter-spacing: 2px;
+  text-transform: uppercase; color: var(--muted);
+}
+
+.nav-pills { display: flex; gap: 6px; }
+.nav-pill {
+  font-family: var(--mono); font-size: 9px; letter-spacing: 1.5px;
+  text-transform: uppercase; padding: 5px 12px; border-radius: 3px;
+  border: 1px solid transparent; color: var(--muted); cursor: pointer;
+  transition: all .18s; background: none;
+}
+.nav-pill:hover, .nav-pill.active {
+  color: var(--white); border-color: var(--edge); background: var(--lift);
+}
+.pill-live {
+  color: var(--green) !important; border-color: rgba(82,176,122,0.3) !important;
+  background: var(--g-bg) !important;
+}
+.pill-live::before { content: '● '; font-size: 7px; }
+
+/* ── PAGE LAYOUT ── */
+.page-wrap {
+  position: relative; z-index: 1;
+  max-width: 1060px; margin: 0 auto;
+  padding: 56px 40px 120px;
+}
+
+/* ── HERO SECTION ── */
+.hero {
+  margin-bottom: 52px;
+  border-bottom: 1px solid var(--edge);
+  padding-bottom: 40px;
+}
+.hero-eyebrow {
+  font-family: var(--mono); font-size: 10px; letter-spacing: 3px;
+  text-transform: uppercase; color: var(--gold);
+  display: flex; align-items: center; gap: 14px; margin-bottom: 20px;
+}
+.hero-eyebrow::before {
+  content: ''; width: 32px; height: 1px;
+  background: linear-gradient(90deg, transparent, var(--gold));
+}
+.hero h1 {
+  font-family: var(--serif); font-size: 48px; font-weight: 700;
+  line-height: 1.1; color: var(--white);
+  margin-bottom: 16px; letter-spacing: -0.3px;
+}
+.hero h1 em { font-style: italic; color: var(--gold); font-weight: 400; }
+.hero-desc {
+  font-size: 16px; color: var(--soft); line-height: 1.75; max-width: 580px;
+}
+
+/* ── SECTION LABELS ── */
+.sec-label {
+  display: flex; align-items: center; gap: 12px;
+  margin-bottom: 16px;
+}
+.sec-num {
+  font-family: var(--mono); font-size: 9px; letter-spacing: 2px;
+  text-transform: uppercase; color: var(--gold);
+  background: var(--glow); border: 1px solid rgba(212,168,48,0.2);
+  padding: 3px 9px; border-radius: 2px;
+}
+.sec-title {
+  font-family: var(--mono); font-size: 9px; letter-spacing: 2.5px;
+  text-transform: uppercase; color: var(--muted);
+}
+.sec-line { flex: 1; height: 1px; background: var(--edge); }
+
+/* ── CARDS ── */
+.card {
+  background: var(--paper);
+  border: 1px solid var(--edge);
+  border-radius: 10px;
+  padding: 28px 30px;
+  margin-bottom: 16px;
+  position: relative;
+  overflow: hidden;
+}
+.card::before {
+  content: '';
+  position: absolute; top: 0; left: 0; right: 0; height: 1px;
+  background: linear-gradient(90deg, transparent 8%, rgba(212,168,48,0.18) 50%, transparent 92%);
+}
+
+/* ── FORM GRIDS ── */
+.grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+.grid-4 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+
+/* ── FIELD ── */
+.field { display: flex; flex-direction: column; gap: 6px; }
+.field-label {
+  font-family: var(--mono); font-size: 9px; letter-spacing: 1.5px;
+  text-transform: uppercase; color: var(--muted);
+  display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+}
+
+/* State chips */
+.chip {
+  font-family: var(--mono); font-size: 8px; letter-spacing: 0.5px;
+  padding: 2px 7px; border-radius: 2px; border: 1px solid;
+}
+.chip-wait { color: var(--muted); background: transparent; border-color: var(--edge); }
+.chip-ready { color: var(--gold); background: var(--glow); border-color: rgba(212,168,48,0.25); }
+.chip-auto { color: var(--green); background: var(--g-bg); border-color: rgba(82,176,122,0.25); }
+.chip-warn { color: var(--amber); background: var(--a-bg); border-color: rgba(212,136,64,0.25); }
+
+/* Select + Input styling */
+.field select,
+.field input[type="text"] {
+  font-family: var(--serif); font-size: 14px; color: var(--white);
+  background: var(--lift); border: 1px solid var(--edge);
+  border-radius: 7px; padding: 10px 13px; outline: none;
+  transition: border-color .16s, box-shadow .16s;
+  appearance: none; -webkit-appearance: none; cursor: pointer;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23363648' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 12px center;
+  padding-right: 32px;
+}
+.field input[type="text"] {
+  background-image: none; padding-right: 13px;
+  cursor: default; color: var(--soft); font-style: italic;
+}
+.field select:focus {
+  border-color: var(--gold);
+  box-shadow: 0 0 0 3px var(--glow);
+  background-color: var(--raise);
+}
+.field select:disabled { opacity: 0.28; cursor: not-allowed; }
+.field select option { background: var(--lift); color: var(--white); }
+.field.is-filled select { border-color: rgba(212,168,48,0.22); }
+.field.is-auto select {
+  border-color: rgba(82,176,122,0.22);
+  background-color: rgba(82,176,122,0.03);
+}
+
+/* ── PREDICT BUTTON ── */
+.predict-btn {
+  width: 100%; padding: 16px; margin-top: 6px;
+  background: var(--gold); color: var(--ink);
+  border: none; border-radius: 7px; cursor: pointer;
+  font-family: var(--serif); font-size: 17px; font-weight: 700;
+  letter-spacing: 0.3px;
+  transition: background .18s, transform .15s, box-shadow .18s;
+}
+.predict-btn:hover:not(:disabled) {
+  background: var(--gold2);
+  transform: translateY(-1px);
+  box-shadow: 0 8px 28px rgba(212,168,48,0.2);
+}
+.predict-btn:active:not(:disabled) { transform: translateY(0); }
+.predict-btn:disabled { opacity: 0.28; cursor: not-allowed; }
+
+/* ── RESULT SECTION ── */
+#result-section { display: none; margin-top: 6px; }
+
+/* ── SCORE CARD ── */
+.score-layout {
+  display: grid; grid-template-columns: 200px 1fr; gap: 36px; align-items: center;
+}
+
+/* Circular gauge */
+.gauge-wrap { position: relative; width: 200px; height: 200px; flex-shrink: 0; }
+.gauge-wrap svg { width: 200px; height: 200px; transform: rotate(-90deg); overflow: visible; }
+.g-track { fill: none; stroke: var(--raise); stroke-width: 10; }
+.g-arc {
+  fill: none; stroke-width: 10; stroke-linecap: round;
+  transition: stroke-dashoffset 1.6s cubic-bezier(.4,0,.2,1), stroke .4s;
+}
+.gauge-center {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+}
+.gauge-pct {
+  font-family: var(--serif); font-size: 50px; font-weight: 700;
+  line-height: 1; transition: color .4s;
+}
+.gauge-tag {
+  font-family: var(--mono); font-size: 8px; letter-spacing: 2px;
+  text-transform: uppercase; color: var(--muted); margin-top: 5px;
+}
+
+/* Verdict */
+.verdict { }
+.verdict-badge {
+  font-family: var(--mono); font-size: 9px; letter-spacing: 2px;
+  text-transform: uppercase;
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 6px 14px; border-radius: 3px; border: 1px solid;
+  margin-bottom: 16px;
+}
+.vb-green { color: var(--green); border-color: rgba(82,176,122,.3); background: var(--g-bg); }
+.vb-amber { color: var(--amber); border-color: rgba(212,136,64,.3); background: var(--a-bg); }
+.vb-red   { color: var(--red);   border-color: rgba(200,72,72,.3);  background: var(--r-bg); }
+.verdict-headline {
+  font-family: var(--serif); font-size: 27px; font-weight: 700;
+  color: var(--white); margin-bottom: 10px; line-height: 1.25;
+}
+.verdict-desc { font-size: 15px; color: var(--soft); line-height: 1.75; margin-bottom: 14px; }
+.verdict-action {
+  padding: 13px 16px; border-radius: 6px; border-left: 2px solid;
+  font-size: 14px; line-height: 1.65;
+}
+.va-green { border-color: var(--green); background: var(--g-bg); color: #80CCA0; }
+.va-amber { border-color: var(--amber); background: var(--a-bg); color: #DBA878; }
+.va-red   { border-color: var(--red);   background: var(--r-bg); color: #D88080; }
+
+/* ── FACTOR GRID ── */
+.factors-grid {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 13px;
+}
+.factor-card {
+  background: var(--lift); border: 1px solid var(--edge);
+  border-radius: 8px; padding: 16px;
+  transition: border-color .18s, transform .18s;
+}
+.factor-card:hover { border-color: var(--line); transform: translateY(-2px); }
+.fc-label {
+  font-family: var(--mono); font-size: 8px; letter-spacing: 1.5px;
+  text-transform: uppercase; color: var(--muted); margin-bottom: 7px;
+}
+.fc-value {
+  font-family: var(--serif); font-size: 24px; font-weight: 700;
+  line-height: 1; margin-bottom: 4px;
+}
+.fc-desc { font-size: 12px; color: var(--muted); line-height: 1.5; margin-bottom: 10px; }
+.fc-bar-track { height: 2px; background: var(--raise); border-radius: 1px; overflow: hidden; }
+.fc-bar-fill { height: 2px; border-radius: 1px; width: 0; transition: width 1.2s cubic-bezier(.4,0,.2,1) .3s; }
+
+/* ── REJECTION REASONS PANEL ── */
+.rejection-table {
+  width: 100%; border-collapse: collapse;
+  font-family: var(--serif); font-size: 14px;
+}
+.rejection-table thead th {
+  font-family: var(--mono); font-size: 8px; letter-spacing: 1.5px;
+  text-transform: uppercase; color: var(--muted);
+  padding: 8px 14px; text-align: left;
+  border-bottom: 1px solid var(--edge);
+}
+.rejection-table tbody tr {
+  border-bottom: 1px solid rgba(42,42,56,0.6);
+  transition: background .15s;
+}
+.rejection-table tbody tr:last-child { border-bottom: none; }
+.rejection-table tbody tr:hover { background: var(--lift); }
+.rejection-table td {
+  padding: 11px 14px; vertical-align: top; color: var(--soft);
+  font-size: 13px;
+}
+.rejection-table td:first-child { color: var(--white); font-weight: 600; }
+.rej-reason-pill {
+  display: inline-block; font-family: var(--mono); font-size: 9px; letter-spacing: 0.5px;
+  padding: 3px 8px; border-radius: 3px; margin: 2px 3px 2px 0; border: 1px solid;
+}
+.rp-1 { color: var(--red);   background: var(--r-bg); border-color: rgba(200,72,72,.25); }
+.rp-2 { color: var(--amber); background: var(--a-bg); border-color: rgba(212,136,64,.25); }
+.rp-3 { color: var(--blue);  background: var(--b-bg); border-color: rgba(88,144,200,.25); }
+.pom-point {
+  font-family: var(--mono); font-size: 10px;
+  color: var(--soft); font-style: italic;
+  display: block; margin-top: 4px;
+}
+
+/* ── VENDOR KPI ROW ── */
+.vendor-kpi-grid {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 13px;
+}
+.kpi-card {
+  background: var(--lift); border: 1px solid var(--edge);
+  border-radius: 8px; padding: 16px; text-align: center;
+}
+.kpi-value { font-family: var(--serif); font-size: 28px; font-weight: 700; }
+.kpi-label {
+  font-family: var(--mono); font-size: 8px; letter-spacing: 1px;
+  text-transform: uppercase; color: var(--muted); margin-top: 5px;
+}
+
+/* ── ALTERNATIVES PANEL ── */
+.alts-note {
+  font-size: 14px; font-style: italic; color: var(--soft);
+  margin-bottom: 18px; line-height: 1.6;
+}
+.alts-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 13px; }
+.alt-card {
+  background: var(--lift); border: 1px solid var(--edge);
+  border-radius: 8px; padding: 18px; position: relative; overflow: hidden;
+  transition: border-color .2s, transform .2s;
+}
+.alt-card::after {
+  content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 2px;
+  background: linear-gradient(90deg, transparent, var(--gold), transparent);
+  transform: scaleX(0); transition: transform .22s;
+}
+.alt-card:hover { border-color: rgba(212,168,48,0.35); transform: translateY(-2px); }
+.alt-card:hover::after { transform: scaleX(1); }
+.alt-rank-tag {
+  font-family: var(--mono); font-size: 8px; letter-spacing: 2px;
+  text-transform: uppercase; color: var(--gold); margin-bottom: 7px;
+}
+.alt-vendor-name {
+  font-size: 13px; font-weight: 600; color: var(--white);
+  margin-bottom: 13px; line-height: 1.4;
+}
+.alt-stats { display: flex; gap: 18px; margin-bottom: 11px; }
+.alt-stat-val { font-family: var(--serif); font-size: 22px; font-weight: 700; }
+.alt-stat-lbl { font-family: var(--mono); font-size: 8px; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); margin-top: 3px; }
+.delta-tag {
+  font-family: var(--mono); font-size: 9px;
+  padding: 3px 8px; border-radius: 2px; border: 1px solid;
+  display: inline-block; margin: 2px 3px 0 0;
+}
+.d-up   { color: var(--green); background: var(--g-bg); border-color: rgba(82,176,122,.2); }
+.d-down { color: var(--red);   background: var(--r-bg); border-color: rgba(200,72,72,.2); }
+.d-same { color: var(--amber); background: var(--a-bg); border-color: rgba(212,136,64,.2); }
+
+/* ── EMPTY STATE ── */
+.empty-state {
+  grid-column: 1 / -1; text-align: center;
+  padding: 28px; color: var(--muted);
+  font-style: italic; font-size: 14px;
+}
+
+/* ── FOOTNOTE ── */
+.footnote {
+  font-family: var(--mono); font-size: 9px; letter-spacing: 0.5px;
+  color: var(--muted); text-align: center; margin-top: 36px;
+  line-height: 2.2; border-top: 1px solid var(--edge); padding-top: 24px;
+}
+
+/* ── ANIMATIONS ── */
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(18px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.anim { animation: fadeInUp .45s ease forwards; opacity: 0; }
+.d1 { animation-delay: .04s; }
+.d2 { animation-delay: .12s; }
+.d3 { animation-delay: .20s; }
+.d4 { animation-delay: .28s; }
+.d5 { animation-delay: .36s; }
+
+/* ── RESPONSIVE ── */
+@media (max-width: 820px) {
+  header { padding: 0 18px; }
+  .nav-pills { display: none; }
+  .page-wrap { padding: 32px 16px 80px; }
+  .hero h1 { font-size: 30px; }
+  .score-layout { grid-template-columns: 1fr; }
+  .grid-3, .grid-4, .factors-grid, .vendor-kpi-grid, .alts-grid { grid-template-columns: 1fr 1fr; }
+  .grid-2 { grid-template-columns: 1fr; }
+  .gauge-wrap { margin: 0 auto; }
+}
+</style>
+</head>
+<body>
+
+<!-- ════ HEADER ════ -->
+<header>
+  <div class="brand">
+    <span class="brand-name">First<span>Pass</span></span>
+    <span class="brand-divider"></span>
+    <span class="brand-sub">RFT Intelligence</span>
+  </div>
+  <div class="nav-pills">
+    <button class="nav-pill">3,661 Samples</button>
+    <button class="nav-pill">32 Vendors</button>
+    <button class="nav-pill">AW25 – SS26</button>
+    <button class="nav-pill pill-live">Predictor Active</button>
+  </div>
+</header>
+
+<!-- ════ PAGE ════ -->
+<div class="page-wrap">
+
+  <!-- HERO -->
+  <div class="hero">
+    <div class="hero-eyebrow">Garment Quality Prediction Dashboard</div>
+    <h1>What is the <em>Right First Time</em><br>chance for this style?</h1>
+    <p class="hero-desc">Select garment type, construction details, and team to receive a data-driven RFT prediction — informed by 3,661 historical first-submission records across 32 vendors. Vendor list is automatically filtered to those with a documented history in the selected fabric.</p>
+  </div>
+
+  <!-- ════ STEP 1: GARMENT & STYLE ════ -->
+  <div class="sec-label">
+    <span class="sec-num">01</span>
+    <span class="sec-title">Garment &amp; Style Details</span>
+    <div class="sec-line"></div>
+  </div>
+  <div class="card">
+
+    <div class="grid-3">
+      <div class="field" id="field-garment">
+        <label class="field-label">Garment Type</label>
+        <select id="sel-garment" onchange="onGarment()">
+          <option value="">— Select garment —</option>
+          <option>Bottoms</option>
+          <option>Denim</option>
+          <option>Dress</option>
+          <option>Shirt</option>
+          <option>T shirt</option>
+          <option>Top</option>
+        </select>
+      </div>
+      <div class="field" id="field-fit">
+        <label class="field-label">Fit Type <span class="chip chip-wait" id="chip-fit">select garment</span></label>
+        <select id="sel-fit" disabled onchange="onFitChange()">
+          <option value="">—</option>
+        </select>
+      </div>
+      <div class="field" id="field-block">
+        <label class="field-label">Block Pattern <span class="chip chip-wait" id="chip-block">select garment</span></label>
+        <select id="sel-block" disabled onchange="onBlockChange()">
+          <option value="">—</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="grid-3">
+      <div class="field" id="field-stretch">
+        <label class="field-label">Fabric Stretch <span class="chip chip-wait" id="chip-stretch">select garment</span></label>
+        <select id="sel-stretch" disabled onchange="onStretchChange()">
+          <option value="">—</option>
+        </select>
+      </div>
+      <div class="field" id="field-ease">
+        <label class="field-label">Ease Allowance <span class="chip chip-wait" id="chip-ease">select garment</span></label>
+        <select id="sel-ease" disabled onchange="onEaseChange()">
+          <option value="">—</option>
+        </select>
+      </div>
+      <div class="field is-auto" id="field-fabric">
+        <label class="field-label">
+          Fabric Type
+          <span class="chip chip-auto" id="chip-fabric" style="display:none">auto-detected</span>
+        </label>
+        <select id="sel-fabric" onchange="onFabricChange()">
+          <option value="">Complete stretch + ease above</option>
+          <option>Cotton Jersey</option>
+          <option>Cotton Twill</option>
+          <option>Cotton Woven</option>
+          <option>French Terry</option>
+          <option>Rib Knit</option>
+          <option>Rigid Denim</option>
+          <option>Single Jersey</option>
+          <option>Stretch Denim</option>
+          <option>Stretch Twill</option>
+          <option>Stretch Woven</option>
+          <option>Viscose Blend</option>
+          <option>Viscose Woven</option>
+          <option>Woven Fabric</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <div class="field">
+        <label class="field-label">
+          Pattern Complexity Score
+          <span class="chip chip-auto" id="chip-cx" style="display:none">auto</span>
+        </label>
+        <input type="text" id="inp-cx" readonly placeholder="auto-filled from block pattern">
+      </div>
+      <div class="field">
+        <label class="field-label">
+          DXF Pattern Pieces
+          <span class="chip chip-auto" id="chip-pc" style="display:none">auto</span>
+        </label>
+        <input type="text" id="inp-pc" readonly placeholder="auto-filled from block pattern">
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ════ STEP 2: VENDOR & TEAM ════ -->
+  <div class="sec-label">
+    <span class="sec-num">02</span>
+    <span class="sec-title">Vendor &amp; Team</span>
+    <div class="sec-line"></div>
+  </div>
+  <div class="card">
+
+    <div class="grid-4">
+      <div class="field" id="field-vendor">
+        <label class="field-label">
+          Vendor
+          <span class="chip chip-wait" id="chip-vendor">select fabric first</span>
+        </label>
+        <select id="sel-vendor" disabled onchange="checkReady()">
+          <option value="">—</option>
+        </select>
+      </div>
+      <div class="field">
+        <label class="field-label">Buyer</label>
+        <select id="sel-buyer" onchange="checkReady()">
+          <option value="">— Select buyer —</option>
+          <option>Akshata Patil</option>
+          <option>Madhuri Ramakrishnan</option>
+          <option>Ramya Sharma</option>
+          <option>Smarnika Tupe</option>
+          <option>Tanisha Gupta</option>
+        </select>
+      </div>
+      <div class="field">
+        <label class="field-label">Technologist</label>
+        <select id="sel-tech" onchange="checkReady()">
+          <option value="">— Select technologist —</option>
+          <option>Kamalakannan K</option>
+          <option>Krithika RV</option>
+          <option>Supriya Kumari</option>
+        </select>
+      </div>
+      <div class="field">
+        <label class="field-label">Sealer</label>
+        <select id="sel-sealer" onchange="checkReady()">
+          <option value="">— Select sealer —</option>
+          <option>Blue Seal</option>
+          <option>Silver Seal</option>
+          <option>Green Seal</option>
+          <option>Development Sample</option>
+        </select>
+      </div>
+    </div>
+
+    <button class="predict-btn" id="btn-predict" disabled onclick="runPredict()">
+      Predict Right First Time %  →
+    </button>
+
+  </div>
+
+  <!-- ════ RESULT ════ -->
+  <div id="result-section">
+
+    <!-- Score -->
+    <div class="sec-label anim d1">
+      <span class="sec-num">Result</span>
+      <span class="sec-title">RFT Prediction</span>
+      <div class="sec-line"></div>
+    </div>
+    <div class="card anim d1">
+      <div class="score-layout">
+        <div class="gauge-wrap">
+          <svg viewBox="0 0 120 120">
+            <circle class="g-track" cx="60" cy="60" r="50"/>
+            <circle class="g-arc" id="g-arc" cx="60" cy="60" r="50"
+                    stroke-dasharray="314.16" stroke-dashoffset="314.16"/>
+          </svg>
+          <div class="gauge-center">
+            <div class="gauge-pct" id="gauge-pct">0%</div>
+            <div class="gauge-tag">RFT Estimate</div>
+          </div>
+        </div>
+        <div class="verdict">
+          <div class="verdict-badge" id="verdict-badge">—</div>
+          <div class="verdict-headline" id="verdict-headline">—</div>
+          <div class="verdict-desc" id="verdict-desc">—</div>
+          <div class="verdict-action" id="verdict-action">—</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Factor Breakdown -->
+    <div class="sec-label anim d2">
+      <span class="sec-num">02</span>
+      <span class="sec-title">What is Driving this Prediction</span>
+      <div class="sec-line"></div>
+    </div>
+    <div class="card anim d2">
+      <div class="factors-grid" id="factors-grid"></div>
+    </div>
+
+    <!-- Rejection Reference — THE NEW COLUMN -->
+    <div class="sec-label anim d3">
+      <span class="sec-num">03</span>
+      <span class="sec-title">Why Styles in this Fabric are Rejected — Historical Reference</span>
+      <div class="sec-line"></div>
+    </div>
+    <div class="card anim d3">
+      <p style="font-size:13px;color:var(--soft);font-style:italic;margin-bottom:18px;line-height:1.65" id="rej-intro">—</p>
+      <table class="rejection-table" id="rej-table">
+        <thead>
+          <tr>
+            <th>Fabric × Garment</th>
+            <th>Top Rejection Reasons</th>
+            <th>Critical Measurement Points (POM)</th>
+            <th>Rejection Count</th>
+          </tr>
+        </thead>
+        <tbody id="rej-tbody"></tbody>
+      </table>
+    </div>
+
+    <!-- Vendor Profile -->
+    <div class="sec-label anim d4">
+      <span class="sec-num">04</span>
+      <span class="sec-title">Vendor Quality Profile</span>
+      <div class="sec-line"></div>
+    </div>
+    <div class="card anim d4">
+      <div style="font-family:var(--serif);font-size:18px;font-weight:700;color:var(--white);margin-bottom:18px" id="vendor-title">—</div>
+      <div class="vendor-kpi-grid" id="vendor-kpi-grid"></div>
+    </div>
+
+    <!-- Alternatives -->
+    <div class="sec-label anim d5">
+      <span class="sec-num">05</span>
+      <span class="sec-title">Vendor Alternatives for this Garment + Fabric Combination</span>
+      <div class="sec-line"></div>
+    </div>
+    <div class="card anim d5">
+      <p class="alts-note" id="alts-intro">—</p>
+      <div class="alts-grid" id="alts-grid"></div>
+    </div>
+
+    <div class="footnote">
+      FirstPass is calibrated on 3,661 first-submission garment samples across 32 vendors · Seasons AW25, SS25, SS26<br>
+      RFT% = predicted probability of passing quality inspection on the very first submission<br>
+      Vendor list is filtered to those with documented history (≥ 3 samples) in the selected fabric type<br>
+      This tool provides decision support only. Technologist judgement remains the final authority.
+    </div>
+
+  </div><!-- /result-section -->
+
+</div><!-- /page-wrap -->
+
+<script>
+/* ═══════════════════════════════════════════════════════════════════
+   DATA — Extracted from 3,661 training records (PROJECT_FINAL_DATA_SET_updated.xlsx)
+═══════════════════════════════════════════════════════════════════ */
+
+/* Overall vendor stats */
+const VS = {
+  "A P G INDUSTRIES":                      {rft:85.1, rolling:82.47, dhu:4.78, samples:87},
+  "AMMAYAPPER TEXTILES PRIVATE LIMITED":   {rft:68.3, rolling:65.39, dhu:4.82, samples:164},
+  "AVADAT APPARELS":                       {rft:68.6, rolling:72.04, dhu:4.52, samples:124},
+  "Basant India Inc":                      {rft:57.6, rolling:59.70, dhu:4.81, samples:125},
+  "CARLOO TEX PRIVATE LIMITED":            {rft:92.5, rolling:89.67, dhu:4.56, samples:53},
+  "DEFIANCE KNITTING INDUSTRIES PVT LT":   {rft:70.1, rolling:66.32, dhu:4.52, samples:87},
+  "DIMPLE CREATIONS PVT LTD":              {rft:64.5, rolling:65.28, dhu:5.03, samples:155},
+  "EXEL TREND PRIVATE LIMITED":            {rft:67.6, rolling:68.21, dhu:5.03, samples:179},
+  "INSTYLE RETAILS INC":                   {rft:73.4, rolling:72.23, dhu:5.61, samples:184},
+  "K. KNITWEAR CO.":                       {rft:86.1, rolling:89.45, dhu:4.44, samples:79},
+  "KENTEX TEXTILE FABRICS":                {rft:68.0, rolling:67.60, dhu:5.02, samples:103},
+  "KIEVA INTERNATIONAL":                   {rft:75.2, rolling:76.28, dhu:5.30, samples:157},
+  "Kapoor Enterprises":                    {rft:68.8, rolling:67.93, dhu:5.29, samples:112},
+  "LAKKI FASHIONS":                        {rft:73.8, rolling:74.52, dhu:5.50, samples:84},
+  "LAKSHAY KNIT INDIA (11300914)":         {rft:82.5, rolling:84.39, dhu:5.43, samples:114},
+  "MAF CLOTHING PVT LTD":                  {rft:94.3, rolling:94.75, dhu:5.18, samples:53},
+  "OSTER INDIA PRIVATE LIMITED":           {rft:70.2, rolling:67.44, dhu:4.64, samples:114},
+  "PERMESHWAR FASHIONS IMPEX PRIVATE LTD": {rft:68.8, rolling:64.12, dhu:4.82, samples:80},
+  "POSMI SWEATERS LIMITED":                {rft:73.6, rolling:71.96, dhu:7.00, samples:87},
+  "PRATIBHA SWARAJ PVT LTD(11300894)":     {rft:89.3, rolling:90.14, dhu:5.82, samples:84},
+  "PRATIBHA SYNTEX LIMITED":               {rft:71.7, rolling:71.37, dhu:5.66, samples:120},
+  "SAPL INDUSTRIES PVT LTD":               {rft:67.7, rolling:65.79, dhu:4.95, samples:189},
+  "SAPL- ODISHA PLANT(11300932)":          {rft:70.8, rolling:64.93, dhu:4.87, samples:96},
+  "SHIVALIK PRINTS LIMITED":               {rft:67.1, rolling:62.29, dhu:5.42, samples:88},
+  "SINHA KNIT INDUSTRIES LTD":             {rft:88.3, rolling:88.88, dhu:4.60, samples:60},
+  "SIVARAJ SPINNING MILLS PRIVATE":        {rft:88.2, rolling:92.89, dhu:6.00, samples:68},
+  "TAPIO CREATIONS PVT LTD":               {rft:53.8, rolling:47.36, dhu:6.02, samples:145},
+  "Texport Overseas Private limited":      {rft:70.0, rolling:69.43, dhu:6.04, samples:110},
+  "Texport Syndicate (I) Limited":         {rft:66.7, rolling:65.30, dhu:4.85, samples:123},
+  "VICTUS APPAREL PRIVATE LIMITED":        {rft:73.9, rolling:69.91, dhu:4.74, samples:115},
+  "WRECKER JEANS AND CASUALS PVT LTD":     {rft:83.3, rolling:80.63, dhu:5.45, samples:90},
+  "lakshay(Circular knit)":               {rft:69.8, rolling:67.09, dhu:5.71, samples:232},
+};
+
+/* Vendor × Garment RFT (min 3 samples each) */
+const VG = {
+  "A P G INDUSTRIES":{"Bottoms":92.0,"Denim":54.5,"Dress":81.8,"Shirt":100.0,"T shirt":83.3,"Top":89.5},
+  "AMMAYAPPER TEXTILES PRIVATE LIMITED":{"Bottoms":63.6,"Denim":62.5,"Shirt":60.0,"T shirt":77.8,"Top":71.1},
+  "AVADAT APPARELS":{"Bottoms":62.9,"Denim":85.7,"Dress":71.4,"Shirt":71.4,"T shirt":68.8,"Top":68.9},
+  "Basant India Inc":{"Bottoms":54.3,"Denim":64.3,"Dress":40.0,"Shirt":54.5,"Top":60.4},
+  "CARLOO TEX PRIVATE LIMITED":{"Bottoms":93.3,"Shirt":100.0,"T shirt":100.0,"Top":85.7},
+  "DEFIANCE KNITTING INDUSTRIES PVT LT":{"Bottoms":70.8,"Denim":87.5,"Dress":100.0,"Shirt":73.3,"T shirt":66.7,"Top":57.7},
+  "DIMPLE CREATIONS PVT LTD":{"Bottoms":64.5,"Denim":57.1,"Dress":80.0,"Shirt":69.6,"T shirt":66.7,"Top":62.5},
+  "EXEL TREND PRIVATE LIMITED":{"Bottoms":61.1,"Denim":60.0,"Dress":75.0,"Shirt":90.9,"T shirt":72.7,"Top":67.3},
+  "INSTYLE RETAILS INC":{"Bottoms":76.9,"Denim":90.9,"Dress":60.0,"Shirt":66.7,"T shirt":66.7,"Top":73.6},
+  "K. KNITWEAR CO.":{"Bottoms":85.0,"Denim":100.0,"Dress":76.9,"Shirt":100.0,"T shirt":83.3,"Top":85.0},
+  "KENTEX TEXTILE FABRICS":{"Bottoms":72.0,"Denim":85.7,"Dress":70.0,"Shirt":85.7,"T shirt":45.5,"Top":65.1},
+  "KIEVA INTERNATIONAL":{"Bottoms":80.0,"Denim":85.7,"Dress":62.5,"Shirt":82.4,"T shirt":75.0,"Top":74.1},
+  "Kapoor Enterprises":{"Bottoms":71.4,"Denim":66.7,"Dress":85.7,"Shirt":84.6,"T shirt":50.0,"Top":67.6},
+  "LAKKI FASHIONS":{"Bottoms":84.6,"Denim":60.0,"Dress":55.6,"Shirt":80.0,"T shirt":71.4,"Top":77.1},
+  "LAKSHAY KNIT INDIA (11300914)":{"Bottoms":77.3,"Denim":75.0,"Dress":90.0,"Shirt":81.8,"T shirt":81.8,"Top":84.6},
+  "MAF CLOTHING PVT LTD":{"Bottoms":87.5,"Denim":100.0,"Dress":100.0,"Shirt":100.0,"T shirt":100.0,"Top":92.3},
+  "OSTER INDIA PRIVATE LIMITED":{"Bottoms":70.8,"Denim":50.0,"Dress":100.0,"Shirt":76.9,"T shirt":66.7,"Top":72.0},
+  "PERMESHWAR FASHIONS IMPEX PRIVATE LTD":{"Bottoms":60.9,"Denim":75.0,"Dress":100.0,"Shirt":70.6,"T shirt":83.3,"Top":57.9},
+  "POSMI SWEATERS LIMITED":{"Bottoms":71.4,"Denim":57.1,"Dress":66.7,"Shirt":80.0,"T shirt":100.0,"Top":78.9},
+  "PRATIBHA SWARAJ PVT LTD(11300894)":{"Bottoms":90.3,"Denim":85.7,"Dress":71.4,"Shirt":83.3,"T shirt":88.9,"Top":100.0},
+  "PRATIBHA SYNTEX LIMITED":{"Bottoms":81.0,"Denim":72.7,"Dress":100.0,"Shirt":64.7,"T shirt":71.4,"Top":68.3},
+  "SAPL INDUSTRIES PVT LTD":{"Bottoms":63.0,"Denim":64.3,"Dress":100.0,"Shirt":87.5,"T shirt":70.0,"Top":66.7},
+  "SAPL- ODISHA PLANT(11300932)":{"Bottoms":68.4,"Denim":50.0,"Dress":77.8,"Shirt":80.0,"T shirt":57.1,"Top":79.2},
+  "SHIVALIK PRINTS LIMITED":{"Bottoms":78.9,"Denim":63.6,"Dress":66.7,"Shirt":60.0,"T shirt":57.1,"Top":67.9},
+  "SINHA KNIT INDUSTRIES LTD":{"Bottoms":82.4,"Dress":100.0,"Shirt":84.6,"T shirt":92.3,"Top":90.9},
+  "SIVARAJ SPINNING MILLS PRIVATE":{"Bottoms":92.9,"Denim":75.0,"Dress":87.5,"Shirt":100.0,"T shirt":100.0,"Top":81.0},
+  "TAPIO CREATIONS PVT LTD":{"Bottoms":53.2,"Denim":50.0,"Dress":85.7,"Shirt":53.6,"T shirt":52.6,"Top":50.0},
+  "Texport Overseas Private limited":{"Bottoms":67.9,"Denim":60.0,"Dress":55.6,"Shirt":70.8,"T shirt":71.4,"Top":80.0},
+  "Texport Syndicate (I) Limited":{"Bottoms":52.2,"Denim":55.6,"Dress":80.0,"Shirt":83.3,"T shirt":66.7,"Top":69.4},
+  "VICTUS APPAREL PRIVATE LIMITED":{"Bottoms":70.4,"Denim":75.0,"Dress":75.0,"Shirt":77.8,"T shirt":85.7,"Top":73.2},
+  "WRECKER JEANS AND CASUALS PVT LTD":{"Bottoms":75.0,"Denim":72.7,"Dress":87.5,"Shirt":87.5,"T shirt":78.6,"Top":90.9},
+  "lakshay(Circular knit)":{"Bottoms":66.7,"Denim":61.5,"Dress":70.0,"Shirt":77.8,"T shirt":62.5,"Top":71.2},
+};
+
+/* Vendor × Fabric RFT (min 3 samples) — used for vendor filtering */
+const VF = {
+  "A P G INDUSTRIES":{"Cotton Jersey":91.7,"Cotton Twill":95.0,"Rib Knit":75.0,"Rigid Denim":54.5,"Single Jersey":80.0,"Stretch Twill":80.0,"Viscose Blend":75.0,"Viscose Woven":100.0,"Woven Fabric":85.7},
+  "AMMAYAPPER TEXTILES PRIVATE LIMITED":{"Cotton Jersey":68.8,"Cotton Twill":68.8,"Cotton Woven":60.0,"Rib Knit":75.0,"Rigid Denim":60.0,"Single Jersey":83.3,"Stretch Denim":63.6,"Stretch Twill":50.0,"Viscose Woven":62.8},
+  "AVADAT APPARELS":{"Cotton Jersey":69.6,"Cotton Twill":65.5,"Cotton Woven":80.0,"Rib Knit":66.7,"Rigid Denim":100.0,"Single Jersey":68.4,"Stretch Denim":66.7,"Stretch Twill":50.0,"Stretch Woven":50.0,"Viscose Woven":70.6,"Woven Fabric":71.4},
+  "Basant India Inc":{"Cotton Jersey":62.1,"Cotton Twill":53.6,"Cotton Woven":60.0,"Rigid Denim":61.5,"Single Jersey":42.9,"Stretch Twill":57.1,"Viscose Blend":33.3,"Viscose Woven":60.9,"Woven Fabric":50.0},
+  "CARLOO TEX PRIVATE LIMITED":{"Cotton Jersey":100.0,"Cotton Twill":100.0,"French Terry":100.0,"Single Jersey":75.0,"Stretch Woven":100.0,"Viscose Woven":87.5},
+  "DEFIANCE KNITTING INDUSTRIES PVT LT":{"Cotton Jersey":66.7,"Cotton Twill":76.2,"Cotton Woven":57.1,"Rib Knit":100.0,"Rigid Denim":100.0,"Single Jersey":25.0,"Stretch Denim":66.7,"Stretch Twill":33.3,"Viscose Woven":78.6,"Woven Fabric":100.0},
+  "DIMPLE CREATIONS PVT LTD":{"Cotton Jersey":63.3,"Cotton Twill":66.7,"Cotton Woven":72.7,"Rib Knit":57.1,"Rigid Denim":57.1,"Single Jersey":100.0,"Stretch Twill":57.1,"Viscose Woven":60.5,"Woven Fabric":80.0},
+  "EXEL TREND PRIVATE LIMITED":{"Cotton Jersey":58.6,"Cotton Twill":63.0,"Cotton Woven":100.0,"Rib Knit":75.0,"Rigid Denim":50.0,"Single Jersey":77.8,"Stretch Twill":55.6,"Stretch Woven":75.0,"Viscose Woven":78.8,"Woven Fabric":75.0},
+  "INSTYLE RETAILS INC":{"Cotton Jersey":79.1,"Cotton Twill":72.7,"Rib Knit":60.0,"Rigid Denim":88.9,"Single Jersey":75.0,"Stretch Woven":66.7,"Viscose Blend":50.0,"Viscose Woven":66.1,"Woven Fabric":66.7},
+  "K. KNITWEAR CO.":{"Cotton Jersey":91.7,"Cotton Twill":87.5,"Cotton Woven":100.0,"Rib Knit":66.7,"Rigid Denim":100.0,"Single Jersey":100.0,"Stretch Twill":75.0,"Viscose Blend":100.0,"Viscose Woven":81.8,"Woven Fabric":70.0},
+  "KENTEX TEXTILE FABRICS":{"Cotton Jersey":56.0,"Cotton Twill":77.8,"Cotton Woven":75.0,"Rib Knit":50.0,"Rigid Denim":85.7,"Single Jersey":66.7,"Stretch Twill":57.1,"Viscose Woven":70.0,"Woven Fabric":66.7},
+  "KIEVA INTERNATIONAL":{"Cotton Jersey":75.5,"Cotton Twill":76.5,"Cotton Woven":87.5,"Rib Knit":66.7,"Rigid Denim":85.7,"Single Jersey":78.6,"Stretch Twill":100.0,"Viscose Blend":33.3,"Viscose Woven":72.4,"Woven Fabric":80.0},
+  "Kapoor Enterprises":{"Cotton Jersey":57.9,"Cotton Twill":69.6,"Cotton Woven":80.0,"French Terry":66.7,"Rib Knit":50.0,"Rigid Denim":66.7,"Single Jersey":73.3,"Stretch Twill":80.0,"Viscose Blend":75.0,"Viscose Woven":68.2,"Woven Fabric":100.0},
+  "LAKKI FASHIONS":{"Cotton Jersey":76.9,"Cotton Twill":87.5,"Rib Knit":69.2,"Rigid Denim":55.6,"Single Jersey":66.7,"Stretch Twill":80.0,"Stretch Woven":100.0,"Viscose Woven":77.8,"Woven Fabric":55.6},
+  "LAKSHAY KNIT INDIA (11300914)":{"Cotton Jersey":85.3,"Cotton Twill":76.2,"Cotton Woven":80.0,"Rib Knit":100.0,"Rigid Denim":75.0,"Single Jersey":83.3,"Stretch Denim":75.0,"Stretch Woven":75.0,"Viscose Woven":81.0,"Woven Fabric":88.9},
+  "MAF CLOTHING PVT LTD":{"Cotton Jersey":83.3,"Cotton Twill":91.7,"Rigid Denim":100.0,"Single Jersey":100.0,"Stretch Twill":75.0,"Viscose Woven":100.0,"Woven Fabric":100.0},
+  "OSTER INDIA PRIVATE LIMITED":{"Cotton Jersey":62.1,"Cotton Twill":66.7,"Cotton Woven":70.0,"Rigid Denim":66.7,"Single Jersey":57.1,"Stretch Denim":0.0,"Stretch Twill":83.3,"Viscose Woven":83.3},
+  "PERMESHWAR FASHIONS IMPEX PRIVATE LTD":{"Cotton Jersey":63.6,"Cotton Twill":63.2,"Cotton Woven":83.3,"Rib Knit":75.0,"Single Jersey":100.0,"Stretch Denim":66.7,"Stretch Twill":50.0,"Viscose Woven":50.0,"Woven Fabric":100.0},
+  "POSMI SWEATERS LIMITED":{"Cotton Jersey":63.6,"Cotton Twill":77.8,"Cotton Woven":85.7,"Rib Knit":100.0,"Rigid Denim":83.3,"Stretch Denim":37.5,"Stretch Twill":60.0,"Stretch Woven":50.0,"Viscose Woven":100.0,"Woven Fabric":66.7},
+  "PRATIBHA SWARAJ PVT LTD(11300894)":{"Cotton Jersey":100.0,"Cotton Twill":88.9,"Cotton Woven":77.8,"Rib Knit":100.0,"Rigid Denim":83.3,"Single Jersey":85.7,"Stretch Twill":100.0,"Viscose Blend":60.0,"Viscose Woven":100.0},
+  "PRATIBHA SYNTEX LIMITED":{"Cotton Jersey":71.0,"Cotton Twill":80.0,"Cotton Woven":50.0,"Rib Knit":60.0,"Rigid Denim":70.0,"Single Jersey":55.6,"Stretch Woven":80.0,"Viscose Woven":73.9,"Woven Fabric":100.0},
+  "SAPL INDUSTRIES PVT LTD":{"Cotton Jersey":65.9,"Cotton Twill":65.2,"French Terry":66.7,"Rigid Denim":60.0,"Single Jersey":83.3,"Stretch Denim":75.0,"Stretch Twill":50.0,"Viscose Woven":67.3,"Woven Fabric":100.0},
+  "SAPL- ODISHA PLANT(11300932)":{"Cotton Jersey":83.3,"Cotton Twill":72.4,"Rib Knit":40.0,"Rigid Denim":42.9,"Single Jersey":87.5,"Stretch Twill":55.6,"Stretch Woven":100.0,"Viscose Blend":75.0,"Viscose Woven":63.6,"Woven Fabric":80.0},
+  "SHIVALIK PRINTS LIMITED":{"Cotton Jersey":57.1,"Cotton Twill":78.9,"Cotton Woven":55.6,"Rib Knit":66.7,"Rigid Denim":71.4,"Single Jersey":57.1,"Stretch Denim":50.0,"Viscose Blend":60.0,"Viscose Woven":80.0},
+  "SINHA KNIT INDUSTRIES LTD":{"Cotton Jersey":81.8,"Cotton Twill":86.7,"Rib Knit":100.0,"Single Jersey":100.0,"Stretch Woven":100.0,"Viscose Woven":84.6,"Woven Fabric":100.0},
+  "SIVARAJ SPINNING MILLS PRIVATE":{"Cotton Jersey":100.0,"Cotton Twill":90.0,"Cotton Woven":100.0,"French Terry":75.0,"Rib Knit":100.0,"Rigid Denim":80.0,"Stretch Denim":66.7,"Stretch Twill":100.0,"Stretch Woven":100.0,"Viscose Woven":81.2,"Woven Fabric":100.0},
+  "TAPIO CREATIONS PVT LTD":{"Cotton Jersey":52.6,"Cotton Twill":54.8,"Cotton Woven":50.0,"French Terry":28.6,"Rib Knit":45.5,"Single Jersey":71.4,"Stretch Denim":50.0,"Stretch Twill":40.0,"Stretch Woven":60.0,"Viscose Blend":66.7,"Viscose Woven":53.8,"Woven Fabric":100.0},
+  "Texport Overseas Private limited":{"Cotton Jersey":71.4,"Cotton Twill":65.4,"Cotton Woven":50.0,"Rib Knit":100.0,"Rigid Denim":60.0,"Single Jersey":71.4,"Viscose Woven":81.8,"Woven Fabric":55.6},
+  "Texport Syndicate (I) Limited":{"Cotton Jersey":66.7,"Cotton Twill":52.2,"Cotton Woven":85.7,"Rigid Denim":60.0,"Single Jersey":75.0,"Stretch Denim":50.0,"Viscose Woven":69.0,"Woven Fabric":75.0},
+  "VICTUS APPAREL PRIVATE LIMITED":{"Cotton Jersey":71.4,"Cotton Twill":70.4,"Cotton Woven":75.0,"Rigid Denim":75.0,"Single Jersey":72.2,"Viscose Woven":81.2,"Woven Fabric":71.4},
+  "WRECKER JEANS AND CASUALS PVT LTD":{"Cotton Jersey":90.9,"Cotton Twill":72.7,"Rib Knit":75.0,"Rigid Denim":66.7,"Single Jersey":81.8,"Stretch Twill":80.0,"Stretch Woven":66.7,"Viscose Woven":90.9,"Woven Fabric":85.7},
+  "lakshay(Circular knit)":{"Cotton Jersey":71.4,"Cotton Twill":65.6,"Cotton Woven":71.4,"Rib Knit":69.2,"Rigid Denim":61.5,"Single Jersey":71.4,"Stretch Twill":75.0,"Viscose Woven":70.4,"Woven Fabric":70.0},
+};
+
+/* Garment+Fit historical RFT rates */
+const GF = {
+  "Bottoms|Regular":76.6,"Bottoms|Relaxed":76.0,"Bottoms|Slim Fit":66.7,"Bottoms|Straight Fit":69.9,"Bottoms|Wide Leg":65.3,
+  "Denim|Regular":70.2,"Denim|Slim Fit":64.3,"Denim|Straight Fit":70.4,"Denim|Wide Leg":66.7,
+  "Dress|Boxy":76.3,"Dress|Regular":81.3,"Dress|Relaxed":80.4,"Dress|Slim Fit":66.1,
+  "Shirt|Boxy":71.9,"Shirt|Oversized":84.8,"Shirt|Regular":72.9,"Shirt|Relaxed":78.0,
+  "T shirt|Boxy":68.5,"T shirt|Oversized":75.4,"T shirt|Regular":72.3,
+  "Top|Boxy":70.2,"Top|Oversized":72.0,"Top|Regular":70.9,"Top|Relaxed":73.1,"Top|Slim Fit":66.7
+};
+
+/* Fabric RFT rates */
+const FAB = {
+  "Stretch Denim":62.7,"Stretch Twill":66.2,"Viscose Blend":66.1,"Rigid Denim":69.4,
+  "Cotton Jersey":70.6,"Cotton Twill":71.8,"Viscose Woven":72.4,"Rib Knit":72.3,
+  "Cotton Woven":73.5,"Single Jersey":75.2,"French Terry":75.6,"Woven Fabric":79.3,"Stretch Woven":83.3
+};
+
+/* Block pattern metadata */
+const BP = {
+  "Mini Flare":           {rft:72.2, cx:2.7, pc:26},
+  "Mom Fit":              {rft:75.0, cx:2.7, pc:26},
+  "Skinny Fit":           {rft:65.7, cx:2.7, pc:26},
+  "Straight Fit":         {rft:72.4, cx:2.9, pc:46},
+  "T-Shirt Fitted Rib":   {rft:76.7, cx:5.0, pc:96},
+  "T-Shirt Relaxed DS":   {rft:73.9, cx:5.0, pc:96},
+  "T-Shirt Relaxed FS":   {rft:72.2, cx:5.0, pc:96},
+  "Wide Leg":             {rft:66.2, cx:2.7, pc:26},
+};
+
+/* Sealer baseline RFT */
+const SEAL = {"Blue Seal":69.8,"Silver Seal":77.4,"Green Seal":72.0,"Development Sample":73.8};
+
+/* Rejection reference data: fabric × garment → {rejCount, reasons[], pomPoints[]} */
+const REJ = {
+  "Viscose Woven|Top":     {cnt:193, reasons:["Pattern / Specs not followed","Construction / Style / Workmanship not followed","Construction Deviation / Poor Workmanship"], pom:["1/2 Chest","1/2 Bottom","Body Length"]},
+  "Cotton Twill|Bottoms":  {cnt:164, reasons:["Construction / Style / Workmanship not followed","Pattern / Specs not followed","Construction Deviation / Poor Workmanship"], pom:["1/2 Hip","1/2 Waist","1/2 Bottom"]},
+  "Cotton Jersey|Top":     {cnt:160, reasons:["Pattern / Specs not followed","Construction / Style / Workmanship not followed","Construction Deviation / Poor Workmanship"], pom:["1/2 Chest","1/2 Bottom","1/2 Waist"]},
+  "Single Jersey|Top":     {cnt:96,  reasons:["Pattern / Specs not followed","Measurement Deviation","Incorrect Fit"], pom:["Body Length","1/2 Waist","1/2 Hip"]},
+  "Viscose Woven|Shirt":   {cnt:67,  reasons:["Pattern / Specs not followed","Construction / Style / Workmanship not followed","Measurement Deviation"], pom:["1/2 Waist","1/2 Chest","1/2 Knee / 1/2 Bottom"]},
+  "Rib Knit|T shirt":      {cnt:53,  reasons:["Pattern / Specs not followed","Construction Deviation / Poor Workmanship","Incorrect Fit"], pom:["1/2 Waist","Across Shoulder / 1/2 Chest","Inseam"]},
+  "Rigid Denim|Denim":     {cnt:49,  reasons:["Comments Not Followed","Construction / Style / Workmanship not followed","Incorrect Fit"], pom:["1/2 Bottom","1/2 Waist","1/2 Bottom / Sleeve Length"]},
+  "Stretch Denim|Denim":   {cnt:47,  reasons:["Pattern / Specs not followed","Incorrect Fit","Construction / Style / Workmanship not followed"], pom:["1/2 Bottom / Across Shoulder","Body Length","1/2 Hip"]},
+  "Cotton Woven|Shirt":    {cnt:43,  reasons:["Pattern / Specs not followed","Construction Deviation / Poor Workmanship","Incorrect Fit"], pom:["1/2 Waist","1/2 Chest","Back Rise"]},
+  "Stretch Twill|Bottoms": {cnt:37,  reasons:["Construction / Style / Workmanship not followed","Pattern / Specs not followed","Construction Deviation / Poor Workmanship"], pom:["1/2 Waist","1/2 Chest","Back Rise / 1/2 Hip"]},
+  "Woven Fabric|Dress":    {cnt:28,  reasons:["Pattern / Specs not followed","Construction / Style / Workmanship not followed","Measurement Deviation"], pom:["1/2 Waist","1/2 Waist / 1/2 Bottom","1/2 Bottom / 1/2 Chest"]},
+  "French Terry|Top":      {cnt:28,  reasons:["Pattern / Specs not followed","Measurement Deviation","Construction / Style / Workmanship not followed"], pom:["1/2 Bottom","Across Shoulder","1/2 Chest / 1/2 Waist"]},
+  "Viscose Blend|Dress":   {cnt:26,  reasons:["Incorrect Fit","Measurement Deviation","Pattern / Specs not followed"], pom:["1/2 Hip","1/2 Waist","1/2 Chest / 1/2 Waist"]},
+  "Cotton Jersey|T shirt": {cnt:19,  reasons:["Construction / Style / Workmanship not followed","Measurement Deviation","Comments Not Followed"], pom:["1/2 Waist","1/2 Bottom / 1/2 Waist","Body Length"]},
+  "Stretch Woven|Shirt":   {cnt:9,   reasons:["Hand Feel / Washed Effect / Garment Finish Improper","Construction / Style / Workmanship not followed","Construction Deviation / Poor Workmanship"], pom:["1/2 Knee / 1/2 Thigh / 1/2 Hip"]},
+  "Single Jersey|T shirt": {cnt:8,   reasons:["Pattern / Specs not followed","Incorrect Fit","Measurement Deviation"], pom:["1/2 Waist / Across Shoulder","Sleeve Length / 1/2 Waist / 1/2 Bottom"]},
+};
+
+/* Cascade option maps */
+const FITS  = {Bottoms:["Regular","Relaxed","Slim Fit","Straight Fit","Wide Leg"],Denim:["Regular","Slim Fit","Straight Fit","Wide Leg"],Dress:["Boxy","Regular","Relaxed","Slim Fit"],Shirt:["Boxy","Oversized","Regular","Relaxed"],"T shirt":["Boxy","Oversized","Regular"],Top:["Boxy","Oversized","Regular","Relaxed","Slim Fit"]};
+const BLOCKS= {Bottoms:["Mini Flare","Mom Fit","Skinny Fit","Straight Fit","Wide Leg"],Denim:["Skinny Fit","Straight Fit","Wide Leg"],Dress:["T-Shirt Fitted Rib","T-Shirt Relaxed DS","T-Shirt Relaxed FS"],Shirt:["T-Shirt Relaxed FS"],"T shirt":["T-Shirt Relaxed DS","T-Shirt Relaxed FS"],Top:["T-Shirt Fitted Rib","T-Shirt Relaxed DS","T-Shirt Relaxed FS"]};
+const STRETS= {Bottoms:["Non-Stretch","25–40% Stretch"],Denim:["Non-Stretch","25–40% Stretch"],Dress:["Non-Stretch"],Shirt:["Non-Stretch","25–40% Stretch"],"T shirt":["Non-Stretch","50–75% Stretch","75–100% Stretch"],Top:["Non-Stretch","25–40% Stretch","50–75% Stretch","75–100% Stretch"]};
+const EASES = {Bottoms:["Tight (0–5%)","Standard (5–10%)","Relaxed (10–20%)"],Denim:["Tight (0–5%)","Standard (5–10%)","Relaxed (10–20%)"],Dress:["Tight (0–5%)","Standard (5–10%)","Relaxed (10–20%)","Oversized (>20%)"],Shirt:["Standard (5–10%)","Relaxed (10–20%)","Oversized (>20%)"],"T shirt":["Standard (5–10%)","Oversized (>20%)"],Top:["Tight (0–5%)","Standard (5–10%)","Relaxed (10–20%)","Oversized (>20%)"]};
+
+/* ═══ HELPERS ═══ */
+const $ = id => document.getElementById(id);
+
+function populateSel(sel, opts, placeholder) {
+  sel.innerHTML = `<option value="">${placeholder}</option>`;
+  opts.forEach(o => sel.insertAdjacentHTML('beforeend', `<option value="${o}">${o}</option>`));
+}
+
+function setChip(id, type, text) {
+  const el = $(id); if(!el) return;
+  el.textContent = text;
+  el.className = 'chip chip-' + type;
+}
+
+function col(rft) {
+  return rft >= 75 ? 'var(--green)' : rft >= 55 ? 'var(--amber)' : 'var(--red)';
+}
+
+/* ═══ CASCADE ═══ */
+function onGarment() {
+  const g = $('sel-garment').value;
+
+  ['sel-fit','sel-block','sel-stretch','sel-ease','sel-vendor'].forEach(id => {
+    const el = $(id); el.innerHTML = '<option value="">—</option>'; el.disabled = true;
+  });
+  $('sel-fabric').value = '';
+  $('inp-cx').value = ''; $('inp-pc').value = '';
+  $('chip-fabric').style.display = 'none';
+  $('chip-cx').style.display = 'none';
+  $('chip-pc').style.display = 'none';
+  setChip('chip-fit','wait','select garment'); setChip('chip-block','wait','select garment');
+  setChip('chip-stretch','wait','select garment'); setChip('chip-ease','wait','select garment');
+  setChip('chip-vendor','wait','select fabric first');
+
+  if (!g) { checkReady(); return; }
+
+  populateSel($('sel-fit'),   FITS[g]   || [], 'Select fit type');   $('sel-fit').disabled   = false; setChip('chip-fit','ready','↑ required');
+  populateSel($('sel-block'), BLOCKS[g] || [], 'Select block pattern'); $('sel-block').disabled = false; setChip('chip-block','ready','↑ required');
+  populateSel($('sel-stretch'),STRETS[g]|| [], 'Select stretch');     $('sel-stretch').disabled= false; setChip('chip-stretch','ready','↑ required');
+  populateSel($('sel-ease'),  EASES[g]  || [], 'Select ease');        $('sel-ease').disabled   = false; setChip('chip-ease','ready','↑ required');
+
+  checkReady();
+}
+
+function onFitChange()    { attemptAutoFabric(); checkReady(); }
+function onStretchChange(){ attemptAutoFabric(); checkReady(); }
+function onEaseChange()   { attemptAutoFabric(); checkReady(); }
+
+function onBlockChange() {
+  const b = $('sel-block').value;
+  const meta = BP[b];
+  if (meta) {
+    $('inp-cx').value = meta.cx + ' / 5.0';
+    $('inp-pc').value = meta.pc + ' pieces';
+    $('chip-cx').style.display = 'inline';
+    $('chip-pc').style.display = 'inline';
+  } else {
+    $('inp-cx').value = ''; $('inp-pc').value = '';
+    $('chip-cx').style.display = 'none'; $('chip-pc').style.display = 'none';
+  }
+  checkReady();
+}
+
+function onFabricChange() {
+  $('chip-fabric').style.display = 'none';
+  $('field-fabric').classList.remove('is-auto');
+  updateVendorsForFabric();
+  checkReady();
+}
+
+function attemptAutoFabric() {
+  const g = $('sel-garment').value;
+  const s = $('sel-stretch').value;
+  const f = $('sel-fit').value;
+  const e = $('sel-ease').value;
+  if (!g || !s) return;
+
+  let fab = '';
+  if (g === 'Denim')   { fab = s !== 'Non-Stretch' ? 'Stretch Denim' : 'Rigid Denim'; }
+  else if (g === 'T shirt') {
+    if (s === '75–100% Stretch') fab = 'Rib Knit';
+    else if (s === '50–75% Stretch') fab = 'Single Jersey';
+    else fab = 'Cotton Jersey';
+  } else if (g === 'Shirt') {
+    if (s === '25–40% Stretch') fab = 'Stretch Woven';
+    else if (e === 'Oversized (>20%)') fab = 'Viscose Woven';
+    else fab = 'Cotton Woven';
+  } else if (g === 'Dress') {
+    fab = f === 'Slim Fit' ? 'Viscose Blend' : 'Woven Fabric';
+  } else if (g === 'Bottoms') {
+    fab = s === '25–40% Stretch' ? 'Stretch Twill' : 'Cotton Twill';
+  } else if (g === 'Top') {
+    if (s === '75–100% Stretch') fab = 'Rib Knit';
+    else if (s === '50–75% Stretch') fab = 'Single Jersey';
+    else if (s === '25–40% Stretch') fab = (e === 'Oversized (>20%)' || e === 'Relaxed (10–20%)') ? 'French Terry' : 'Single Jersey';
+    else fab = (f === 'Boxy' || f === 'Oversized') ? 'Viscose Woven' : 'Cotton Jersey';
+  }
+
+  if (fab) {
+    $('sel-fabric').value = fab;
+    $('chip-fabric').style.display = 'inline';
+    $('field-fabric').classList.add('is-auto');
+    updateVendorsForFabric();
+  }
+}
+
+function updateVendorsForFabric() {
+  const fab = $('sel-fabric').value;
+  const g   = $('sel-garment').value;
+  const vSel = $('sel-vendor');
+
+  if (!fab) {
+    vSel.innerHTML = '<option value="">—</option>';
+    vSel.disabled = true;
+    setChip('chip-vendor','wait','select fabric first');
+    return;
+  }
+
+  /* Filter vendors that:
+     1. Have ≥3 samples with this fabric (exist in VF[v][fab])
+     2. Have ≥3 samples with this garment (exist in VG[v][g]) if garment selected */
+  const valid = Object.keys(VS).filter(v => {
+    const hasFab  = VF[v] && VF[v][fab] !== undefined;
+    const hasGmt  = !g || (VG[v] && VG[v][g] !== undefined);
+    return hasFab && hasGmt;
+  }).sort();
+
+  populateSel(vSel, valid, `Select vendor (${valid.length} with history)`);
+  vSel.disabled = valid.length === 0;
+  setChip('chip-vendor', valid.length > 0 ? 'ready' : 'warn',
+          valid.length > 0 ? `↑ ${valid.length} matched` : 'no history for this combo');
+}
+
+function checkReady() {
+  const required = ['sel-garment','sel-fit','sel-block','sel-stretch','sel-ease','sel-fabric','sel-vendor'];
+  const ok = required.every(id => !!$(id).value);
+  $('btn-predict').disabled = !ok;
+}
+
+/* ═══ RFT CALCULATION ═══
+   Weights derived from XGBoost feature importances on 3,661 samples:
+   VG  40%  — vendor × garment specific history (strongest signal)
+   RRL 20%  — vendor rolling RFT (long-run quality)
+   GF  15%  — garment + fit type rate
+   FAB 12%  — fabric difficulty
+   BP   8%  — block pattern complexity
+   SL   5%  — sealer influence
+*/
+function calcRFT(vendor, garment, fit, fabric, block, sealer) {
+  const v  = VS[vendor] || {rft:72, rolling:70, dhu:5};
+  const vg = VG[vendor]?.[garment] ?? v.rft;
+  const rl = v.rolling;
+  const gf = GF[garment+'|'+fit] ?? 72;
+  const fb = FAB[fabric] ?? 72;
+  const bp = BP[block]?.rft ?? 72;
+  const sl = SEAL[sealer] ?? 72;
+  return Math.round(Math.max(2, Math.min(98,
+    vg*0.40 + rl*0.20 + gf*0.15 + fb*0.12 + bp*0.08 + sl*0.05
+  )));
+}
+
+/* ═══ RENDER ═══ */
+function runPredict() {
+  const vendor  = $('sel-vendor').value;
+  const garment = $('sel-garment').value;
+  const fit     = $('sel-fit').value;
+  const fabric  = $('sel-fabric').value;
+  const block   = $('sel-block').value;
+  const sealer  = $('sel-sealer').value;
+  if (!vendor || !garment || !fit || !fabric || !block) return;
+
+  const rft    = calcRFT(vendor, garment, fit, fabric, block, sealer);
+  const vs     = VS[vendor];
+  const vgRft  = VG[vendor]?.[garment] ?? vs.rft;
+  const vfRft  = VF[vendor]?.[fabric];
+  const bpMeta = BP[block] || {cx:4, pc:60, rft:72};
+  const isHi   = rft >= 75;
+  const isMd   = rft >= 55 && rft < 75;
+  const colour  = col(rft);
+
+  /* Show result section */
+  const resEl = $('result-section');
+  resEl.style.display = 'block';
+  setTimeout(() => resEl.scrollIntoView({behavior:'smooth', block:'start'}), 60);
+
+  /* — Gauge — */
+  const arc = $('g-arc');
+  arc.style.stroke = colour;
+  arc.style.strokeDashoffset = 314.16 - (rft/100)*314.16;
+  $('gauge-pct').style.color = colour;
+  let c = 0;
+  const iv = setInterval(() => {
+    c = Math.min(rft, c + Math.ceil(rft/30));
+    $('gauge-pct').textContent = c + '%';
+    if (c >= rft) clearInterval(iv);
+  }, 25);
+
+  /* — Verdict — */
+  const badge = $('verdict-badge');
+  const headline = $('verdict-headline');
+  const desc = $('verdict-desc');
+  const action = $('verdict-action');
+
+  if (isHi) {
+    badge.textContent = '● High RFT — likely to pass';
+    badge.className = 'verdict-badge vb-green';
+    headline.textContent = `${rft}% probability of passing first time`;
+    desc.textContent = `${vendor} holds a ${vgRft.toFixed(0)}% RFT for ${garment.toLowerCase()} — above average. The selected ${fabric} in a ${fit.toLowerCase()} silhouette presents manageable construction complexity, giving this sample strong odds of clearing first inspection.`;
+    action.textContent = 'Proceed through standard review. No pre-dispatch intervention is required.';
+    action.className = 'verdict-action va-green';
+  } else if (isMd) {
+    badge.textContent = '● Moderate RFT — review advised';
+    badge.className = 'verdict-badge vb-amber';
+    headline.textContent = `${rft}% probability of passing first time`;
+    desc.textContent = `${vendor}'s RFT for ${garment.toLowerCase()} is ${vgRft.toFixed(0)}%. Combined with ${fabric.toLowerCase()} and a ${fit.toLowerCase()} construction, ${(100-rft)}% of comparable samples have historically failed first inspection.`;
+    action.textContent = 'Flag for technologist review. Verify critical measurement points against spec before dispatch.';
+    action.className = 'verdict-action va-amber';
+  } else {
+    badge.textContent = '● Low RFT — rejection likely';
+    badge.className = 'verdict-badge vb-red';
+    headline.textContent = `${rft}% probability of passing first time`;
+    desc.textContent = `${vendor} has only a ${vgRft.toFixed(0)}% RFT for ${garment.toLowerCase()} — significantly below average. ${(100-rft)}% of comparable samples from this vendor have failed first submission. Consider alternative vendors listed below.`;
+    action.textContent = 'Strongly recommend pre-dispatch inspection. Technologist must verify all critical measurement points before this sample leaves the vendor.';
+    action.className = 'verdict-action va-red';
+  }
+
+  /* — Factor breakdown — */
+  const factors = [
+    {lbl:'Vendor × Garment RFT',  val:vgRft.toFixed(0)+'%',       desc:`${vendor.split(' ')[0]} historical RFT for ${garment.toLowerCase()}`, bar:vgRft/100,                          c:col(vgRft)},
+    {lbl:'Vendor Rolling RFT',    val:vs.rolling.toFixed(1)+'%',   desc:'Long-run first-time pass rate',                                        bar:vs.rolling/100,                     c:col(vs.rolling)},
+    {lbl:'Garment + Fit RFT',     val:(GF[garment+'|'+fit]??72).toFixed(0)+'%', desc:`${fit} ${garment.toLowerCase()} historical average`,        bar:(GF[garment+'|'+fit]??72)/100,      c:col(GF[garment+'|'+fit]??72)},
+    {lbl:'Fabric Type RFT',       val:(FAB[fabric]??72).toFixed(0)+'%',          desc:`${fabric} — industry-wide difficulty`,                     bar:(FAB[fabric]??72)/100,              c:col(FAB[fabric]??72)},
+    {lbl:'Block Pattern',         val:bpMeta.cx+' / 5.0 cx',       desc:`${block} — ${bpMeta.pc} DXF pieces`,                                   bar:1-(bpMeta.cx-2.7)/2.3,              c:col(bpMeta.rft)},
+    {lbl:'DHU% Defect Rate',      val:vs.dhu.toFixed(2),            desc:'Vendor avg defects per 100 units',                                     bar:1-(vs.dhu-4.44)/(7.0-4.44),         c:vs.dhu>5.5?'var(--red)':vs.dhu>5.0?'var(--amber)':'var(--green)'},
+  ];
+
+  $('factors-grid').innerHTML = factors.map((f, i) => `
+    <div class="factor-card anim" style="animation-delay:${.04+i*.07}s;opacity:0">
+      <div class="fc-label">${f.lbl}</div>
+      <div class="fc-value" style="color:${f.c}">${f.val}</div>
+      <div class="fc-desc">${f.desc}</div>
+      <div class="fc-bar-track"><div class="fc-bar-fill" style="background:${f.c}" data-w="${Math.round(Math.max(3,Math.min(100,f.bar*100)))}"></div></div>
+    </div>`).join('');
+
+  setTimeout(() => {
+    document.querySelectorAll('.fc-bar-fill').forEach(b => b.style.width = b.dataset.w + '%');
+  }, 300);
+
+  /* — Rejection reference table — */
+  $('rej-intro').textContent =
+    `Historical rejection analysis for ${fabric} × ${garment} combinations. These are the documented failure modes you should monitor before dispatch:`;
+
+  // Show this combo + related combos (same fabric or same garment)
+  const rejRows = [];
+  for (const [key, data] of Object.entries(REJ)) {
+    const [kFab, kGmt] = key.split('|');
+    if (kFab === fabric || kGmt === garment) {
+      rejRows.push({key, kFab, kGmt, ...data, priority: (kFab===fabric && kGmt===garment) ? 0 : kFab===fabric ? 1 : 2});
+    }
+  }
+  rejRows.sort((a,b) => a.priority - b.priority);
+
+  const pillCls = ['rp-1','rp-2','rp-3'];
+  $('rej-tbody').innerHTML = rejRows.length ? rejRows.map(row => {
+    const isExact = row.kFab === fabric && row.kGmt === garment;
+    const reasonHtml = row.reasons.map((r, i) => `<span class="rej-reason-pill ${pillCls[i]||'rp-3'}">${r}</span>`).join('');
+    const pomHtml = row.pom.map(p => `<span class="pom-point">↳ ${p}</span>`).join('');
+    return `<tr${isExact ? ' style="background:rgba(212,168,48,0.04)"' : ''}>
+      <td>${row.kFab}<br><span style="font-size:12px;color:var(--muted);font-weight:400">${row.kGmt}${isExact?' <span style="color:var(--gold);font-size:10px">← selected</span>':''}</span></td>
+      <td>${reasonHtml}</td>
+      <td>${pomHtml}</td>
+      <td style="text-align:center"><span style="font-family:var(--mono);font-size:16px;font-weight:700;color:${row.cnt>80?'var(--red)':row.cnt>30?'var(--amber)':'var(--soft)'}">${row.cnt}</span><br><span style="font-family:var(--mono);font-size:8px;color:var(--muted)">cases</span></td>
+    </tr>`;
+  }).join('') : `<tr><td colspan="4" class="empty-state">No rejection history found for this fabric/garment combination.</td></tr>`;
+
+  /* — Vendor KPIs — */
+  $('vendor-title').textContent = vendor;
+  const kpis = [
+    {val:vs.rft.toFixed(1)+'%',        lbl:'Overall RFT %',        c:col(vs.rft)},
+    {val:vs.rolling.toFixed(1)+'%',    lbl:'Rolling RFT Average',  c:col(vs.rolling)},
+    {val:vgRft.toFixed(0)+'%',         lbl:`RFT for ${garment}`,   c:col(vgRft)},
+    {val:vfRft != null ? vfRft.toFixed(0)+'%' : 'N/A', lbl:`RFT for ${fabric}`, c: vfRft != null ? col(vfRft) : 'var(--muted)'},
+  ];
+  $('vendor-kpi-grid').innerHTML = kpis.map(k =>
+    `<div class="kpi-card"><div class="kpi-value" style="color:${k.c}">${k.val}</div><div class="kpi-label">${k.lbl}</div></div>`
+  ).join('');
+
+  /* — Alternatives — */
+  // Filter: vendors with fabric AND garment history, exclude current
+  const alts = Object.keys(VS)
+    .filter(v => v !== vendor && VF[v]?.[fabric] !== undefined && (!garment || VG[v]?.[garment] !== undefined))
+    .map(v => ({v, vgr: VG[v]?.[garment] ?? VS[v].rft, vfr: VF[v][fabric], overall: VS[v].rft}))
+    .sort((a,b) => b.vgr - a.vgr)
+    .slice(0, 3);
+
+  $('alts-intro').textContent = alts.length
+    ? `Vendors with documented history in both ${fabric} and ${garment.toLowerCase()}, ranked by garment-specific RFT:`
+    : `No alternative vendors have documented history with ${fabric} and ${garment.toLowerCase()}.`;
+
+  const rankLabels = ['Best Match','Strong Option','Good Option'];
+  $('alts-grid').innerHTML = alts.length ? alts.map(({v, vgr, vfr, overall}, i) => {
+    const gDiff = vgr - vgRft;
+    const vfC = col(vfr);
+    return `<div class="alt-card anim" style="animation-delay:${.08+i*.1}s;opacity:0">
+      <div class="alt-rank-tag">${rankLabels[i]}</div>
+      <div class="alt-vendor-name">${v}</div>
+      <div class="alt-stats">
+        <div>
+          <div class="alt-stat-val" style="color:${col(vgr)}">${vgr.toFixed(0)}%</div>
+          <div class="alt-stat-lbl">RFT for ${garment}</div>
+        </div>
+        <div>
+          <div class="alt-stat-val" style="color:${vfC}">${vfr.toFixed(0)}%</div>
+          <div class="alt-stat-lbl">RFT for ${fabric}</div>
+        </div>
+      </div>
+      ${gDiff > 2
+        ? `<span class="delta-tag d-up">+${gDiff.toFixed(0)}% garment RFT improvement</span>`
+        : gDiff < -2
+        ? `<span class="delta-tag d-down">${gDiff.toFixed(0)}% lower garment RFT</span>`
+        : `<span class="delta-tag d-same">≈ Similar garment RFT</span>`}
+    </div>`;
+  }).join('') : `<div class="empty-state">No alternative vendors with history in this exact combination.</div>`;
+}
+</script>
+</body>
+</html>
